@@ -11,10 +11,12 @@ seriePath = "D:\\Film\\Serier\\"
 moviePath = "D:\\Film\\Movies\\"
 logFile = "D:\\Film\\utorrentScript.log"
 
+#Setup logging format
 logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=logging.INFO)
 
 #--- Classes --- #
 
+# Class that checks if a filetype is valid Video type
 class VideoFileTypes:
     types = {"avi", "mkv", "mov", "mp4", "mpg", "mpeg", "wmv"}
    
@@ -29,6 +31,7 @@ class VideoFileTypes:
         else:
             return False
 
+# Class for uTorrent status flags
 class Status:
     Started = 1
     Checking = 2
@@ -60,6 +63,7 @@ class Status:
         
         return s
 
+# Class for specifying the type of a downloaded torrent        
 class TorrentType:
     Video, Serie, Movie, Other = range(4)
     
@@ -73,6 +77,7 @@ class TorrentType:
         else:
             return "Other"
 
+# Class containing information about the torrent            
 class Torrent:
     def __init__(self, argv):
         if len(argv) < 5 or len(argv) > 6:
@@ -95,13 +100,15 @@ class Torrent:
 
         self.fullPath = ""
         self.newPath = ""
-        
+    
+    # Calculates the destination path    
     def calculateNewPath(self):
         if self.torrentType == TorrentType.Serie:
             self.newPath = os.path.join(seriePath, self.name, "Season {:0>2}".format(self.season))
         elif self.torrentType == TorrentType.Movie:
             self.newPath = moviePath
     
+    # Converts the filename to camelCase with spaces
     def checkNameSyntax(self):
         nameParts = self.name.split('.')
         
@@ -110,8 +117,10 @@ class Torrent:
             newName += part.capitalize() + " "
 
         self.name = newName.strip()
-                       
+
+# Main class that makes all the torrent calculations        
 class Matcher:
+    # Entrance for calculating the torrent
     def parseTorrent(torrent):       
         if os.path.isfile(os.path.join(torrent.downloadPath, torrent.filename)):
             torrent.fullPath = os.path.join(torrent.downloadPath, torrent.filename)
@@ -139,7 +148,8 @@ class Matcher:
     
     def parseVideoTorrent(torrent, filename):       
         result = Matcher.searchForSerieInName(filename)
-        if result is not None:            
+        if result is not None and \
+           int(result.group(2)) < 19: # If season is 19 or 20 its more likely its a year for a movie
             torrent.torrentType = TorrentType.Serie
             torrent.name = result.group(1)
             torrent.season = result.group(2)
@@ -207,13 +217,14 @@ elif torrent.torrentType == TorrentType.Movie:
     logging.info("  Movie: {}".format(torrent.name))
 
 try:    
-    if not os.path.exists(torrent.newPath):
-        os.makedirs(torrent.newPath)
-
     if torrent.isDirectory:
         logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, torrent.newPath))
         shutil.move(torrent.fullPath, torrent.newPath)       
     else:
+        #Create destination directory if it does not exist
+        if not os.path.exists(torrent.newPath):
+        os.makedirs(torrent.newPath)
+        
         newFile = os.path.join(torrent.newPath, torrent.filename)
         logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, newFile))
         shutil.move(torrent.fullPath, newFile)
@@ -222,7 +233,7 @@ except IOError as error:
 except shutil.Error as error:
     logging.error("Shutil Error({})".format(error))
 except:
-    logging.error("Unexpected error: {}".format(sys.exc_info()[0]))
+    logging.error("Unexpected error: {}".format(sys.exc_info()))
         
 logging.info("")
 
