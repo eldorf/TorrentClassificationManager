@@ -20,6 +20,7 @@ logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=
 class VideoFileTypes:
     types = {"avi", "mkv", "mov", "mp4", "mpg", "mpeg", "wmv"}
    
+    @staticmethod
     def isVideoFile(filename):
         if filename is None:
             return False
@@ -41,7 +42,8 @@ class Status:
     Paused = 32
     Queued = 64
     Loaded = 128
-
+    
+    @staticmethod
     def decode(status):
         s = ""
         if (status & Status.Started):
@@ -66,7 +68,8 @@ class Status:
 # Class for specifying the type of a downloaded torrent        
 class TorrentType:
     Video, Serie, Movie, Other = range(4)
-    
+
+    @staticmethod
     def decode(type):
         if TorrentType.Video == type:
             return "Video"
@@ -121,6 +124,7 @@ class Torrent:
 # Main class that makes all the torrent calculations        
 class Matcher:
     # Entrance for calculating the torrent
+    @staticmethod
     def parseTorrent(torrent):       
         if os.path.isfile(os.path.join(torrent.downloadPath, torrent.filename)):
             torrent.fullPath = os.path.join(torrent.downloadPath, torrent.filename)
@@ -138,7 +142,8 @@ class Matcher:
                 message = "Downloaded file does not exist. Path: \"{}\" Name: \"{}\"\n".format(torrent.downloadPath, torrent.filename)
                 logging.error(message)
                 raise Exception(message)
-    
+                
+    @staticmethod
     def parseFileName(torrent, filename):
         if VideoFileTypes.isVideoFile(filename):
             torrent.torrentType = TorrentType.Video
@@ -146,6 +151,7 @@ class Matcher:
         else:
             torrent.torrentType = TorrentType.Other
     
+    @staticmethod
     def parseVideoTorrent(torrent, filename):       
         result = Matcher.searchForSerieInName(filename)
         if result is not None and \
@@ -158,17 +164,20 @@ class Matcher:
         else:
             torrent.torrentType = TorrentType.Movie
 
+    @staticmethod
     def parseDirectoryName(torrent):
         assert(torrent.isDirectory)
         result = Matcher.searchForSerieInName(torrent.filename)
         if result is None:
             torrent.isCompleteSeason = True
     
+    @staticmethod
     def searchForSerieInName(filename):
         regexp = "(.*)\.S?(\\d{1,2})E?(\\d{2})\.(.*)"
         reObject = re.compile(regexp, re.IGNORECASE)
         return reObject.search(filename)
-        
+    
+    @staticmethod    
     def retrieveFileName(inPath, firstTime = True):
         fileList = os.listdir(inPath)
 
@@ -195,6 +204,7 @@ args = datetime.now().strftime("%Y-%m-%d %H:%M, ")
 for arg in sys.argv:
     args += "\"" +arg +"\" "
 logging.info(args)
+print("0.1")
 logging.info("  Number of arguments %d", len(sys.argv))    
 
 torrent = Torrent(sys.argv)
