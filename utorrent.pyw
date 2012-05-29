@@ -223,7 +223,7 @@ try:
     else:
         #Create destination directory if it does not exist
         if not os.path.exists(torrent.newPath):
-        os.makedirs(torrent.newPath)
+            os.makedirs(torrent.newPath)
         
         newFile = os.path.join(torrent.newPath, torrent.filename)
         logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, newFile))
