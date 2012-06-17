@@ -3,6 +3,7 @@ import sys
 import re
 import os
 import shutil
+import time
 from datetime import datetime
 import logging
 
@@ -167,6 +168,9 @@ class Matcher:
     @staticmethod
     def parseDirectoryName(torrent):
         assert(torrent.isDirectory)
+        if torrent.torrentType != TorrentType.Serie:
+            return
+            
         result = Matcher.searchForSerieInName(torrent.filename)
         if result is None:
             torrent.isCompleteSeason = True
@@ -198,52 +202,71 @@ class Matcher:
                     return fileResult
         return None
         
- 
-# --- Start script --- #            
-args = datetime.now().strftime("%Y-%m-%d %H:%M, ")
-for arg in sys.argv:
-    args += "\"" +arg +"\" "
-logging.info(args)
-print("0.1")
-logging.info("  Number of arguments %d", len(sys.argv))    
+def handleRmTreeError(function, path, exc_info):
+    logging.error("{0}, {1}, {2}".format(function, path, exc_info))
 
-torrent = Torrent(sys.argv)
-Matcher.parseTorrent(torrent)
-torrent.checkNameSyntax()
-torrent.calculateNewPath()
-
-logging.info("  Filename: {}".format(torrent.filename))
-logging.info("  Torrent type: {}".format(TorrentType.decode(torrent.torrentType)))
-logging.info("  isDirectory: {}".format(torrent.isDirectory))
-logging.debug("  Status: {} = {}".format(torrent.status, Status.decode(torrent.status)))
-if torrent.torrentType == TorrentType.Serie:
-    logging.info("  Serie: {}".format(torrent.name))
-    logging.info("  Season: {} ".format(torrent.season))
-    if torrent.isCompleteSeason:
-        logging.info("  Season Complete")        
-    else:
-        logging.info("  Episode: {}".format(torrent.episode))
-elif torrent.torrentType == TorrentType.Movie:
-    logging.info("  Movie: {}".format(torrent.name))
-
-try:    
-    if torrent.isDirectory:
-        logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, torrent.newPath))
-        shutil.move(torrent.fullPath, torrent.newPath)       
-    else:
-        #Create destination directory if it does not exist
-        if not os.path.exists(torrent.newPath):
-            os.makedirs(torrent.newPath)
         
-        newFile = os.path.join(torrent.newPath, torrent.filename)
-        logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, newFile))
-        shutil.move(torrent.fullPath, newFile)
-except IOError as error:
-    logging.error("IO Error({0})".format(error))
-except shutil.Error as error:
-    logging.error("Shutil Error({})".format(error))
-except:
-    logging.error("Unexpected error: {}".format(sys.exc_info()))
-        
-logging.info("")
+def main(argv):
+    # --- Start script --- #            
+    args = datetime.now().strftime("%Y-%m-%d %H:%M, ")
+    for arg in argv:
+        args += "\"" +arg +"\" "
+    logging.info(args)
+    logging.info("  Number of arguments %d", len(sys.argv))    
 
+    torrent = Torrent(sys.argv)
+    Matcher.parseTorrent(torrent)
+    torrent.checkNameSyntax()
+    torrent.calculateNewPath()
+
+    logging.info("  Filename: {}".format(torrent.filename))
+    logging.info("  Torrent type: {}".format(TorrentType.decode(torrent.torrentType)))
+    logging.info("  isDirectory: {}".format(torrent.isDirectory))
+    logging.debug("  Status: {} = {}".format(torrent.status, Status.decode(torrent.status)))
+    if torrent.torrentType == TorrentType.Serie:
+        logging.info("  Serie: {}".format(torrent.name))
+        logging.info("  Season: {} ".format(torrent.season))
+        if torrent.isCompleteSeason:
+            logging.info("  Season Complete")        
+        else:
+            logging.info("  Episode: {}".format(torrent.episode))
+    elif torrent.torrentType == TorrentType.Movie:
+        logging.info("  Movie: {}".format(torrent.name))
+
+    try:    
+        if torrent.isDirectory:
+            if not os.path.exists(torrent.newPath):
+                logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, torrent.newPath))
+                shutil.move(torrent.fullPath, torrent.newPath)       
+            else:
+                logging.info("  Move from \"{}\" to existing directory \"{}\"".format(torrent.fullPath, torrent.newPath))
+                # Move all the files and then remove the old directory
+                for file in os.listdir(torrent.fullPath):
+                    if file == "Thumbs.db": continue
+                    shutil.move(os.path.join(torrent.fullPath,file), torrent.newPath)
+                time.sleep(1) # To let windows release the lock on Thumbs.db
+                shutil.rmtree(torrent.fullPath, False, handleRmTreeError)
+        else:
+            #Create destination directory if it does not exist
+            if not os.path.exists(torrent.newPath):
+                os.makedirs(torrent.newPath)
+            
+            newFile = os.path.join(torrent.newPath, torrent.filename)
+            logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, newFile))
+            shutil.move(torrent.fullPath, newFile)
+    except IOError as error:
+        logging.error("IO Error({0})".format(error))
+    except shutil.Error as error:
+        logging.error("Shutil Error({})".format(error))
+    except:
+        logging.error("Unexpected error: {}".format(sys.exc_info()))
+            
+    logging.info("")
+
+if __name__ == "__main__":
+    try:
+        main(sys.argv)  
+    except Exception:
+        import traceback
+        logging.error(traceback.format_exc())
+        sys.exit(2)  
