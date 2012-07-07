@@ -110,7 +110,7 @@ class Torrent:
         if self.torrentType == TorrentType.Serie:
             self.newPath = os.path.join(seriePath, self.name, "Season {:0>2}".format(self.season))
         elif self.torrentType == TorrentType.Movie:
-            self.newPath = moviePath
+            self.newPath = os.path.join(moviePath, self.name)
     
     # Converts the filename to camelCase with spaces
     def checkNameSyntax(self):
@@ -164,6 +164,7 @@ class Matcher:
             
         else:
             torrent.torrentType = TorrentType.Movie
+            torrent.name = torrent.filename
 
     @staticmethod
     def parseDirectoryName(torrent):
@@ -212,7 +213,6 @@ def main(argv):
     for arg in argv:
         args += "\"" +arg +"\" "
     logging.info(args)
-    logging.info("  Number of arguments %d", len(sys.argv))    
 
     torrent = Torrent(sys.argv)
     Matcher.parseTorrent(torrent)
