@@ -206,6 +206,45 @@ class Matcher:
 def handleRmTreeError(function, path, exc_info):
     logging.error("{0}, {1}, {2}".format(function, path, exc_info))
 
+
+def notifyXbmcClient(torrentName):
+    import socket, urllib, json
+
+    jsonPort = 9090
+    address = "192.168.1.60"
+
+    jsonAddress = (address, jsonPort)
+    try:
+        jsonSocket = socket.create_connection(jsonAddress)
+    except socket.error:
+        # No connection to the machine, ignore
+        return
+
+    # Check if a player is used    
+    command = '{ "jsonrpc": "2.0", "method": "Player.GetActivePlayers", "id": 1 }'
+    jsonSocket.sendall(command)
+    answer = jsonSocket.recv(1024)
+    jsonAns = json.loads(answer)
+
+    jsonSocket.close()
+    # Content in result means that some player is used
+    # We do not not want to disturb that
+    if jsonAns["result"]:
+        return
+
+    # Send the notification
+    logging.debug("   Sending notification to Xbmc client")
+    httpUserName = "xbmc"
+    httpPassword = "4455"
+    httpPort = 49750
+
+    reqAddress = "{0}:{1}".format(address, httpPort )
+    title = "Download complete"
+    message = torrentName + " is downloaded."
+    command = "/xbmcCmds/xbmcHttp?command=ExecBuiltIn&parameter=Notification({0},{1},10000)".format(title, message)
+    req = reqAddress +command
+    urllib.urlopen("http://" + httpUserName + ":" +httpPassword + "@" + req )
+
         
 def main(argv):
     # --- Start script --- #            
@@ -254,6 +293,8 @@ def main(argv):
             newFile = os.path.join(torrent.newPath, torrent.filename)
             logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, newFile))
             shutil.move(torrent.fullPath, newFile)
+        notifyXbmcClient(torrent.name)
+
     except IOError as error:
         logging.error("IO Error({0})".format(error))
     except shutil.Error as error:
