@@ -19,7 +19,7 @@ logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=
 
 # Class that checks if a filetype is valid Video type
 class VideoFileTypes:
-    types = {"avi", "mkv", "mov", "mp4", "mpg", "mpeg", "wmv"}
+    types = ["avi", "mkv", "mov", "mp4", "mpg", "mpeg", "wmv"]
    
     @staticmethod
     def isVideoFile(filename):
@@ -33,38 +33,6 @@ class VideoFileTypes:
         else:
             return False
 
-# Class for uTorrent status flags
-class Status:
-    Started = 1
-    Checking = 2
-    StartAfterCheck = 4 
-    Checked = 8
-    Error = 16
-    Paused = 32
-    Queued = 64
-    Loaded = 128
-    
-    @staticmethod
-    def decode(status):
-        s = ""
-        if (status & Status.Started):
-            s += "Started | "
-        if (status & Status.Checking):
-            s += "Checking | "
-        if (status & Status.StartAfterCheck):
-            s += "StartAfterCheck | "
-        if (status & Status.Checked):
-            s += "Checked | "
-        if (status & Status.Error):
-            s += "Error | "
-        if (status & Status.Paused):
-            s += "Paused | "
-        if (status & Status.Queued):
-            s += "Queued | "
-        if (status & Status.Loaded):
-            s += "Loaded"
-        
-        return s
 
 # Class for specifying the type of a downloaded torrent        
 class TorrentType:
@@ -83,24 +51,15 @@ class TorrentType:
 
 # Class containing information about the torrent            
 class Torrent:
-    def __init__(self, argv):
-        if len(argv) < 5 or len(argv) > 6:
-            sys.exit(2)
-            
+    def __init__(self, downloadPath, filename):
         self.isDirectory = False
         self.isCompleteSeason = False
         self.name = "unknown"
         self.episode = None
         self.season = None
         self.torrentType = TorrentType.Other
-        self.downloadPath = sys.argv[1]
-        self.filename = sys.argv[2]
-        self.status = int(sys.argv[3])
-        self.state = sys.argv[4]
-        self.isFinnished = False
-        
-        if len(argv) == 6:
-            self.isFinnished = True
+        self.downloadPath = downloadPath
+        self.filename = filename
 
         self.fullPath = ""
         self.newPath = ""
@@ -235,7 +194,7 @@ def notifyXbmcClient(torrentName):
     # Send the notification
     logging.debug("   Sending notification to Xbmc client")
     httpUserName = "xbmc"
-    httpPassword = "4455"
+    httpPasswordk = "4455"
     httpPort = 49750
 
     reqAddress = "{0}:{1}".format(address, httpPort )
@@ -245,6 +204,23 @@ def notifyXbmcClient(torrentName):
     req = reqAddress +command
     urllib.urlopen("http://" + httpUserName + ":" +httpPassword + "@" + req )
 
+def getClient(argv):
+    try:
+        trVersion = os.environ["TR_APP_VERSION"]
+    except KeyError:
+        trVersion = None
+
+    if len(argv) == 4 or len(argv) == 5:
+        logging.debug("Using uTorrent")
+        from uTorrentSpecific import UTorrent
+        return UTorrent(argv)
+    elif len(argv) == 0 and trVersion != None:
+        logging.debug("Using Transmission")
+        from transmissionSpecific import Transmission
+        return Transmission()
+    else:
+        logging.error("No valid client found")
+        sys.exit(1)
         
 def main(argv):
     # --- Start script --- #            
@@ -253,7 +229,8 @@ def main(argv):
         args += "\"" +arg +"\" "
     logging.info(args)
 
-    torrent = Torrent(sys.argv)
+    client = getClient(argv)
+    torrent = Torrent(*client.getTorrentInfo)
     Matcher.parseTorrent(torrent)
     torrent.checkNameSyntax()
     torrent.calculateNewPath()
@@ -261,7 +238,6 @@ def main(argv):
     logging.info("  Filename: {}".format(torrent.filename))
     logging.info("  Torrent type: {}".format(TorrentType.decode(torrent.torrentType)))
     logging.info("  isDirectory: {}".format(torrent.isDirectory))
-    logging.debug("  Status: {} = {}".format(torrent.status, Status.decode(torrent.status)))
     if torrent.torrentType == TorrentType.Serie:
         logging.info("  Serie: {}".format(torrent.name))
         logging.info("  Season: {} ".format(torrent.season))
@@ -306,7 +282,7 @@ def main(argv):
 
 if __name__ == "__main__":
     try:
-        main(sys.argv)  
+        main(sys.argv[1:])  
     except Exception:
         import traceback
         logging.error(traceback.format_exc())
