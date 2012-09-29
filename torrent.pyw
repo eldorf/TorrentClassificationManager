@@ -13,7 +13,7 @@ moviePath = "D:\\Film\\Movies\\"
 logFile = "D:\\Film\\utorrentScript.log"
 
 #Setup logging format
-logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=logging.DEBUG)
+logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=logging.INFO)
 
 #--- Classes --- #
 
@@ -51,7 +51,7 @@ class TorrentType:
 
 # Class containing information about the torrent            
 class Torrent:
-    def __init__(self, downloadPath, filename):
+    def __init__(self, downloadPath, filename, id = None):
         self.isDirectory = False
         self.isCompleteSeason = False
         self.name = "unknown"
@@ -60,6 +60,7 @@ class Torrent:
         self.torrentType = TorrentType.Other
         self.downloadPath = downloadPath
         self.filename = filename
+        self.id = id
 
         self.fullPath = ""
         self.newPath = ""
@@ -175,6 +176,7 @@ def notifyXbmcClient(torrentName):
     jsonAddress = (address, jsonPort)
     try:
         jsonSocket = socket.create_connection(jsonAddress)
+        jsonSocket.settimeout(1)
     except socket.error:
         # No connection to the machine, ignore
         return
@@ -274,6 +276,10 @@ def main(argv):
             newFile = os.path.join(torrent.newPath, torrent.filename)
             logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, newFile))
             shutil.move(torrent.fullPath, newFile)
+            
+            if client.getClientName() == "transmission":
+                client.updatePath(torrent.id, torrent.newPath)
+                
         notifyXbmcClient(torrent.name)
 
     except IOError as error:

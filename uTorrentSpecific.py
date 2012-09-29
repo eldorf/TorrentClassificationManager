@@ -10,7 +10,7 @@ class UTorrent:
     def getTorrentInfo(self):
         return [self.downloadPath, self.filename]
         
-    def getClientName():
+    def getClientName(self):
         return "utorrent"
 
 
