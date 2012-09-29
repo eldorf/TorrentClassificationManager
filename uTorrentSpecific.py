@@ -3,12 +3,15 @@ class UTorrent:
         if len(argv) < 3:
             logging.error("Unable to retrive uTorrentData")
             sys.exit(2)
-        self.downloadPath = sys.argv[0]
-        self.filename = sys.argv[1]
-        self.status = int(sys.argv[2])
+        self.downloadPath = argv[0]
+        self.filename = argv[1]
+        self.status = int(argv[2])
 
-    def getTorrentInfo():
-        return [self.downloadPath, self.filename] 
+    def getTorrentInfo(self):
+        return [self.downloadPath, self.filename]
+        
+    def getClientName():
+        return "utorrent"
 
 
 # Class for uTorrent status flags

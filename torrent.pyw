@@ -13,7 +13,7 @@ moviePath = "D:\\Film\\Movies\\"
 logFile = "D:\\Film\\utorrentScript.log"
 
 #Setup logging format
-logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=logging.INFO)
+logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=logging.DEBUG)
 
 #--- Classes --- #
 
@@ -229,13 +229,15 @@ def main(argv):
         args += "\"" +arg +"\" "
     logging.info(args)
 
-    client = getClient(argv)
-    torrent = Torrent(*client.getTorrentInfo)
+    client = getClient(argv[1:])
+    torrent = Torrent(*client.getTorrentInfo())
     Matcher.parseTorrent(torrent)
     torrent.checkNameSyntax()
     torrent.calculateNewPath()
 
     logging.info("  Filename: {}".format(torrent.filename))
+    logging.info("  Filepath: {}".format(torrent.fullPath))
+    logging.debug("  New path: {}".format(torrent.newPath))
     logging.info("  Torrent type: {}".format(TorrentType.decode(torrent.torrentType)))
     logging.info("  isDirectory: {}".format(torrent.isDirectory))
     if torrent.torrentType == TorrentType.Serie:
@@ -247,7 +249,10 @@ def main(argv):
             logging.info("  Episode: {}".format(torrent.episode))
     elif torrent.torrentType == TorrentType.Movie:
         logging.info("  Movie: {}".format(torrent.name))
-
+    else:
+        logging.debug("  Other formats is not handled")
+        logging.info("")
+    
     try:    
         if torrent.isDirectory:
             if not os.path.exists(torrent.newPath):
@@ -281,8 +286,10 @@ def main(argv):
     logging.info("")
 
 if __name__ == "__main__":
+    print "test!!"
+   
     try:
-        main(sys.argv[1:])  
+        main(sys.argv)  
     except Exception:
         import traceback
         logging.error(traceback.format_exc())
