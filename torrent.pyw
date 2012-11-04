@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 import sys
 import re
 import os
@@ -8,9 +8,9 @@ from datetime import datetime
 import logging
 
 # --- Constants --- #
-seriePath = "D:\\Film\\Serier\\"
-moviePath = "D:\\Film\\Movies\\"
-logFile = "D:\\Film\\utorrentScript.log"
+seriePath = "/mnt/downloads/Serier/"
+moviePath = "/mnt/downloads/Movies/"
+logFile = "/mnt/downloads/torrentScript.log"
 
 #Setup logging format
 logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=logging.INFO)
@@ -91,7 +91,7 @@ class Matcher:
             torrent.fullPath = os.path.join(torrent.downloadPath, torrent.filename)
             Matcher.parseFileName(torrent, torrent.filename)
         else:
-            pathParts = torrent.downloadPath.split('\\')
+            pathParts = torrent.downloadPath.split(os.sep)
             lastpart = pathParts.pop()
             if lastpart == torrent.filename and os.path.isdir(torrent.downloadPath):
                 torrent.isDirectory = True
@@ -292,7 +292,6 @@ def main(argv):
     logging.info("")
 
 if __name__ == "__main__":
-    print "test!!"
    
     try:
         main(sys.argv)  

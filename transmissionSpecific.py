@@ -16,8 +16,8 @@ class Transmission:
             self.localtime = os.environ["TR_TIME_LOCALTIME"]
             self.torrentHash = os.environ["TR_TORRENT_HASH"]
             self.torrentId = int(os.environ["TR_TORRENT_ID"])
-            
-            self.downloadPath = self.downloadPath.replace("/", "\\")
+            if os.sep == '\\':            
+                self.downloadPath = self.downloadPath.replace("/", "\\")
             fullpath = os.path.join(self.downloadPath, self.torrentName)
             if not os.path.isfile(fullpath) and os.path.isdir(fullpath):
                 # Add the downloaded directory to download path to mimic the behavior of utorrent
