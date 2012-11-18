@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 import sys
 import re
-import os
+import os, stat
 import shutil
 import time
 from datetime import datetime
 import logging
 
 # --- Constants --- #
+isWindows = os.name == 'nt'
 seriePath = "/mnt/downloads/Serier/"
 moviePath = "/mnt/downloads/Movies/"
 logFile = "/mnt/downloads/torrentScript.log"
@@ -259,7 +260,9 @@ def main(argv):
         if torrent.isDirectory:
             if not os.path.exists(torrent.newPath):
                 logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, torrent.newPath))
-                shutil.move(torrent.fullPath, torrent.newPath)       
+                shutil.move(torrent.fullPath, torrent.newPath)
+                if not isWindows:
+                    subprocess.call(['chmod', 'g+w', torrent.newPath])
             else:
                 logging.info("  Move from \"{}\" to existing directory \"{}\"".format(torrent.fullPath, torrent.newPath))
                 # Move all the files and then remove the old directory
@@ -272,7 +275,8 @@ def main(argv):
             #Create destination directory if it does not exist
             if not os.path.exists(torrent.newPath):
                 os.makedirs(torrent.newPath)
-            
+                if not isWindows:
+                    subprocess.call(['chmod', 'g+w', torrent.newPath])
             newFile = os.path.join(torrent.newPath, torrent.filename)
             logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, newFile))
             shutil.move(torrent.fullPath, newFile)
