@@ -1,14 +1,14 @@
 #!/usr/bin/env python
-import sys
-import re
+import sys, re
 import os, stat
 import shutil
-import time
+import time, glob
+import httplib, urllib
 from datetime import datetime
 import logging
 
 # --- Constants --- #
-isWindows = os.name == 'nt'
+watchdirPath = '/mnt/downloads/watchdir/'
 seriePath = "/mnt/downloads/Serier/"
 moviePath = "/mnt/downloads/Movies/"
 logFile = "/mnt/downloads/torrentScript.log"
@@ -167,7 +167,23 @@ class Matcher:
 def handleRmTreeError(function, path, exc_info):
     logging.error("{0}, {1}, {2}".format(function, path, exc_info))
 
+def notifyRssFeed(torrentName):
+    host = "127.0.0.1"
+    address = "/index.php?page=createfeed&action=create"
 
+    title = "Torrent downloaded"
+    category = "Torrent"
+    description = "Torrent {0} has finished download.".format(torrentName)
+
+    conn = httplib.HTTPConnection(host, 80)
+    conn.connect()
+
+    headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"} 
+    data = urllib.urlencode({'createTitle':title, 'createCategory':category, 'createDescription':description})
+    conn.request("POST", address, data, headers)
+    res = conn.getresponse()
+    logging.debug("Rss response: {0}".format(res))
+ 
 def notifyXbmcClient(torrentName):
     import socket, urllib, json
 
@@ -197,7 +213,7 @@ def notifyXbmcClient(torrentName):
     # Send the notification
     logging.debug("   Sending notification to Xbmc client")
     httpUserName = "xbmc"
-    httpPasswordk = "4455"
+    httpPassword = "4455"
     httpPort = 49750
 
     reqAddress = "{0}:{1}".format(address, httpPort )
@@ -209,6 +225,7 @@ def notifyXbmcClient(torrentName):
 
 def getClient(argv):
     try:
+        # Checking for transmission client
         trVersion = os.environ["TR_APP_VERSION"]
     except KeyError:
         trVersion = None
@@ -224,7 +241,15 @@ def getClient(argv):
     else:
         logging.error("No valid client found")
         sys.exit(1)
-        
+
+def clearWatchdir(torrent):
+    if not watchdirPath:
+        return
+    result = glob.glob(os.path.join(watchdirPath, torrent.name)+'*')
+    for rfile in result:
+        logging.debug("   Removing file {}".format(rfile))
+        os.remove(rfile)
+
 def main(argv):
     # --- Start script --- #            
     args = datetime.now().strftime("%Y-%m-%d %H:%M, ")
@@ -257,6 +282,7 @@ def main(argv):
         logging.info("")
     
     try:    
+        isWindows = os.name == 'nt'
         if torrent.isDirectory:
             if not os.path.exists(torrent.newPath):
                 logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, torrent.newPath))
@@ -283,7 +309,10 @@ def main(argv):
             
             if client.getClientName() == "transmission":
                 client.updatePath(torrent.id, torrent.newPath)
+
+        clearWatchdir(torrent)
                 
+        notifyRssFeed(torrent.name)
         notifyXbmcClient(torrent.name)
 
     except IOError as error:
@@ -301,5 +330,6 @@ if __name__ == "__main__":
         main(sys.argv)  
     except Exception:
         import traceback
-        logging.error(traceback.format_exc())
+        var = traceback.format_exc()
+        logging.error(var)
         sys.exit(2)  
