@@ -14,7 +14,7 @@ moviePath = "/mnt/downloads/Movies/"
 logFile = "/mnt/downloads/torrentScript.log"
 
 #Setup logging format
-logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=logging.INFO)
+logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=logging.DEBUG)
 
 #--- Classes --- #
 
@@ -65,6 +65,15 @@ class Torrent:
 
         self.fullPath = ""
         self.newPath = ""
+
+    def getName(self):
+        if self.torrentType == TorrentType.Serie:
+            if self.isCompleteSeason:
+                return "{0} Season {1}".format(self.name, self.season)
+            else:
+                return "{0} S{1}E{2}".format(self.name, self.season, self.episode)
+        else:
+            return self.name
     
     # Calculates the destination path    
     def calculateNewPath(self):
@@ -175,15 +184,16 @@ def notifyRssFeed(torrentName):
     category = "Torrent"
     description = "Torrent {0} has finished download.".format(torrentName)
 
-    conn = httplib.HTTPConnection(host, 80)
+    conn = httplib.HTTPSConnection(host)
     conn.connect()
 
     headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"} 
     data = urllib.urlencode({'createTitle':title, 'createCategory':category, 'createDescription':description})
     conn.request("POST", address, data, headers)
     res = conn.getresponse()
-    logging.debug("Rss response: {0}".format(res))
- 
+    if res.status != 200:
+       logging.warning("Rss response: {0} {1}".format(res.status, res.reason))
+  
 def notifyXbmcClient(torrentName):
     import socket, urllib, json
 
@@ -246,9 +256,12 @@ def clearWatchdir(torrent):
     if not watchdirPath:
         return
     result = glob.glob(os.path.join(watchdirPath, torrent.name)+'*')
-    for rfile in result:
-        logging.debug("   Removing file {}".format(rfile))
-        os.remove(rfile)
+    try:
+        for rfile in result:
+            logging.debug("   Removing file {}".format(rfile))
+            os.remove(rfile)
+    except OSError as error:
+        logging.error("OS Error({0})".format(error))
 
 def main(argv):
     # --- Start script --- #            
@@ -312,24 +325,22 @@ def main(argv):
 
         clearWatchdir(torrent)
                 
-        notifyRssFeed(torrent.name)
-        notifyXbmcClient(torrent.name)
+        notifyRssFeed(torrent.getName())
+        notifyXbmcClient(torrent.getName())
 
     except IOError as error:
         logging.error("IO Error({0})".format(error))
     except shutil.Error as error:
         logging.error("Shutil Error({})".format(error))
-    except:
-        logging.error("Unexpected error: {}".format(sys.exc_info()))
             
     logging.info("")
 
 if __name__ == "__main__":
-   
     try:
         main(sys.argv)  
     except Exception:
         import traceback
         var = traceback.format_exc()
         logging.error(var)
+        logging.info("")
         sys.exit(2)  
