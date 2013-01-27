@@ -126,7 +126,10 @@ class Matcher:
     def parseVideoTorrent(torrent, filename):       
         result = Matcher.searchForSerieInName(filename)
         if result is not None and \
-           int(result.group(2)) < 19: # If season is 19 or 20 its more likely its a year for a movie
+           int(result.group(2)) < 19 and \
+           int(result.group(3)) < 30:
+            # If season is 19 or 20 its more likely its a year for a movie
+            # If episode is larger than 30 its more likely to be another type of number
             torrent.torrentType = TorrentType.Serie
             torrent.name = result.group(1)
             torrent.season = result.group(2)
