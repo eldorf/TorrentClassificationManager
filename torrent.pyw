@@ -191,7 +191,7 @@ def notifyRssFeed(torrentName):
     data = urllib.urlencode({'createTitle':title, 'createCategory':category, 'createDescription':description})
     conn.request("POST", address, data, headers)
     res = conn.getresponse()
-    if res.status != 200:
+    if res.status != httplib.OK:
        logging.warning("Rss response: {0} {1}".format(res.status, res.reason))
   
 def notifyXbmcClient(torrentName):
@@ -295,27 +295,29 @@ def main(argv):
         logging.info("")
     
     try:    
-        isWindows = os.name == 'nt'
         if torrent.isDirectory:
             if not os.path.exists(torrent.newPath):
-                logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, torrent.newPath))
-                shutil.move(torrent.fullPath, torrent.newPath)
-                if not isWindows:
-                    subprocess.call(['chmod', 'g+w', torrent.newPath])
-            else:
-                logging.info("  Move from \"{}\" to existing directory \"{}\"".format(torrent.fullPath, torrent.newPath))
-                # Move all the files and then remove the old directory
-                for file in os.listdir(torrent.fullPath):
-                    if file == "Thumbs.db": continue
-                    shutil.move(os.path.join(torrent.fullPath,file), torrent.newPath)
+                logging.debug("  Createing directory \"{}\"".format(torrent.newPath))
+                os.mkdir(torrent.newPath)
+            logging.info("  Move from \"{}\" to existing directory \"{}\"".format(torrent.fullPath, torrent.newPath))
+            downloadComplete = True
+            # Move all the files and then remove the old directory
+            for file in os.listdir(torrent.fullPath):
+                if file == "Thumbs.db":
+                     continue
+                if ".part" in file:
+                    # Not all part are done, leaving those
+                    downloadComplete = False
+                    continue
+                shutil.move(os.path.join(torrent.fullPath,file), torrent.newPath)
+            if downloadComplete:
+                logging.debug("  Download complete, removing directory \"{}\"".format(torrent.fullPath))
                 time.sleep(1) # To let windows release the lock on Thumbs.db
                 shutil.rmtree(torrent.fullPath, False, handleRmTreeError)
         else:
             #Create destination directory if it does not exist
             if not os.path.exists(torrent.newPath):
                 os.makedirs(torrent.newPath)
-                if not isWindows:
-                    subprocess.call(['chmod', 'g+w', torrent.newPath])
             newFile = os.path.join(torrent.newPath, torrent.filename)
             logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, newFile))
             shutil.move(torrent.fullPath, newFile)
