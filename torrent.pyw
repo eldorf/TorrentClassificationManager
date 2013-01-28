@@ -301,7 +301,7 @@ def main(argv):
         if torrent.isDirectory:
             if not os.path.exists(torrent.newPath):
                 logging.debug("  Createing directory \"{}\"".format(torrent.newPath))
-                os.mkdir(torrent.newPath)
+                os.makedirs(torrent.newPath)
             logging.info("  Move from \"{}\" to existing directory \"{}\"".format(torrent.fullPath, torrent.newPath))
             downloadComplete = True
             # Move all the files and then remove the old directory
