@@ -39,7 +39,6 @@ class Transmission:
         response_data = response.read()
         response.close()
         conn.close()
-        logging.debug("responseData: " + response_data)
         session_id = str(response_data).split("X-Transmission-Session-Id: ")[-1][0:1-len("</code></p>'")]
         return {'x-transmission-session-id': str(session_id)}
             
@@ -53,7 +52,6 @@ class Transmission:
         if self.connection == None:
             self.connection = httplib.HTTPConnection(self.host, self.port)
             self.headers = self.retrieveHeader()
-            logging.debug("sending command: " + command + "header: " + str(self.headers))
             self.connection.request("POST", self.path, command, self.headers)
 
             response = self.connection.getresponse()
@@ -66,7 +64,6 @@ class Transmission:
         response_raw = response.read()
         response.close()
             
-        logging.debug("raw answer: " + response_raw)
         response = json.loads(response_raw.decode("utf-8"))
         return response
 
@@ -84,16 +81,13 @@ class Transmission:
         command = json.dumps({ "arguments": { "location": newPath, "ids": [id] }, "method": "torrent-set-location", "tag": self.tag })
         
         response = self.sendRequest(command)
-        logging.debug("answer: " + json.dumps(response, indent=4))
         if not self.checkResponseOk(response):
             logging.warning("Unable to update the address in transmission")
             return
             
         command = json.dumps({ "arguments": { "ids": [id]}, "method": "torrent-verify", "tag": self.tag })
-        logging.debug("sending command: " + command + "header: " + str(self.headers))
        
         response = self.sendRequest(command)
-        logging.debug("answer: " + json.dumps(response, indent=4))
         if not self.checkResponseOk(response):
             logging.warning("Unable to verify the new address in transmission")
             return
