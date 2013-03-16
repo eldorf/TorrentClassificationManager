@@ -11,6 +11,7 @@ import logging
 watchdirPath = '/mnt/downloads/watchdir/'
 seriePath = "/mnt/downloads/Serier/"
 moviePath = "/mnt/downloads/Movies/"
+otherPath = "/mnt/downloads/Other/"
 logFile = "/mnt/downloads/torrentScript.log"
 
 #Setup logging format
@@ -81,6 +82,8 @@ class Torrent:
             self.newPath = os.path.join(seriePath, self.name, "Season {:0>2}".format(self.season))
         elif self.torrentType == TorrentType.Movie:
             self.newPath = os.path.join(moviePath, self.name)
+        else:
+             self.newPath = os.path.join(otherPath, self.name)
     
     # Converts the filename to camelCase with spaces
     def checkNameSyntax(self):
@@ -186,9 +189,12 @@ def notifyRssFeed(torrentName):
     title = "Torrent downloaded"
     category = "Torrent"
     description = "Torrent {0} has finished download.".format(torrentName)
-
-    conn = httplib.HTTPSConnection(host)
-    conn.connect()
+    try:
+	conn = httplib.HTTPSConnection(host)
+        conn.connect()
+    except httplib.HTTPException as e:
+	logging.warning(e)
+	return
 
     headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"} 
     data = urllib.urlencode({'createTitle':title, 'createCategory':category, 'createDescription':description})
@@ -335,8 +341,10 @@ def main(argv):
 
     except IOError as error:
         logging.error("IO Error({0})".format(error))
+	raise
     except shutil.Error as error:
         logging.error("Shutil Error({})".format(error))
+	raise
             
     logging.info("")
 
