@@ -3,6 +3,8 @@ import logging
 import httplib, urllib
 
 def notifyRssFeed(torrentName):
+    """Notify the Rss feed about the downloaded torrent."""
+
     host = "127.0.0.1"
     address = "/index.php?page=createfeed&action=create"
 
@@ -23,7 +25,8 @@ def notifyRssFeed(torrentName):
     if res.status != httplib.OK:
        logging.warning("Rss response: {0} {1}".format(res.status, res.reason))
   
-def notifyXbmcClient(torrentName):
+def notifyXbmcClients(torrentName):
+    """Notify the xbmc clients about the downloaded torrent."""
     import socket, urllib, json
 
     jsonPort = 9090
@@ -61,7 +64,7 @@ def notifyXbmcClient(torrentName):
     return
  
 
-
+# Test the notifications
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     notifyRssFeed("This is just a test")

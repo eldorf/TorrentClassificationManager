@@ -1,4 +1,6 @@
 class UTorrent:
+    """Class that holds the uTorrent specific information for the torrent."""
+
     def __init__(self, argv):
         if len(argv) < 3:
             logging.error("Unable to retrive uTorrentData")
@@ -14,8 +16,9 @@ class UTorrent:
         return "utorrent"
 
 
-# Class for uTorrent status flags
 class Status:
+    """Class for uTorrent status flags."""
+
     Started = 1
     Checking = 2
     StartAfterCheck = 4 
@@ -26,7 +29,7 @@ class Status:
     Loaded = 128
     
     @staticmethod
-    def decode(status):
+    def toString(status):
         s = ""
         if (status & Status.Started):
             s += "Started | "

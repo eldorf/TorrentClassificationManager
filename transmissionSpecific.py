@@ -1,6 +1,7 @@
 import os, httplib, json, logging, random
 
 class Transmission:
+    """Class that handles transmission communication."""
     def __init__(self):
         self.port = 9091
         self.host = "127.0.0.1"
@@ -32,7 +33,7 @@ class Transmission:
             
             
     def retrieveHeader(self):
-        # retrieving session id
+        """Retrieving and return the session id"""
         conn = httplib.HTTPConnection(self.host, self.port)
         conn.request("GET", self.path)
         response = conn.getresponse()
@@ -43,12 +44,15 @@ class Transmission:
         return {'x-transmission-session-id': str(session_id)}
             
     def getTorrentInfo(self):
+        """Return the torrent info."""
         return [self.downloadPath, self.torrentName, self.torrentId]
         
     def getClientName(self):
+        """Return the name of the client."""
         return "transmission"
         
-    def sendRequest(self, command):
+    def _sendRequest(self, command):
+        """Send request to the transmission daemon."""
         if self.connection == None:
             self.connection = httplib.HTTPConnection(self.host, self.port)
             self.headers = self.retrieveHeader()
@@ -67,7 +71,8 @@ class Transmission:
         response = json.loads(response_raw.decode("utf-8"))
         return response
 
-    def checkResponseOk(self, response):
+    def _checkResponseOk(self, response):
+        """Return if the response has a success result."""
         try:
             if response["result"] != "success":
                return False
@@ -77,18 +82,18 @@ class Transmission:
         return True
         
     def updatePath(self, id, newPath):
-        #command = json.dumps({ "arguments": { "fields": [ "id", "name", "totalSize" ], "ids": [id] }, "method": "torrent-get", "tag": self.tag })
+        """Tells transmission to update the path to the torrent."""
         command = json.dumps({ "arguments": { "location": newPath, "ids": [id] }, "method": "torrent-set-location", "tag": self.tag })
         
-        response = self.sendRequest(command)
-        if not self.checkResponseOk(response):
+        response = self._sendRequest(command)
+        if not self._checkResponseOk(response):
             logging.warning("Unable to update the address in transmission")
             return
             
         command = json.dumps({ "arguments": { "ids": [id]}, "method": "torrent-verify", "tag": self.tag })
        
-        response = self.sendRequest(command)
-        if not self.checkResponseOk(response):
+        response = self._sendRequest(command)
+        if not self._checkResponseOk(response):
             logging.warning("Unable to verify the new address in transmission")
             return
 

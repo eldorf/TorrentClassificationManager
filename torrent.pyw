@@ -19,12 +19,14 @@ logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=
 
 #--- Classes --- #
 
-# Class that checks if a filetype is valid Video type
 class VideoFileTypes:
+    """Class that checks if a filetype is valid Video type."""
+
     types = ["avi", "mkv", "mov", "mp4", "mpg", "mpeg", "wmv"]
    
     @staticmethod
     def isVideoFile(filename):
+        """Return if file is a videofile."""
         if filename is None:
             return False
             
@@ -36,12 +38,14 @@ class VideoFileTypes:
             return False
 
 
-# Class for specifying the type of a downloaded torrent        
 class TorrentType:
+    """Class for specifying the type of a downloaded torrent."""
+
     Video, Serie, Movie, Other = range(4)
 
     @staticmethod
-    def decode(type):
+    def toString(type):
+        """Return the type as a string."""
         if TorrentType.Video == type:
             return "Video"
         elif TorrentType.Serie == type:
@@ -51,8 +55,9 @@ class TorrentType:
         else:
             return "Other"
 
-# Class containing information about the torrent            
 class Torrent:
+    """Class containing information about the torrent."""
+
     def __init__(self, downloadPath, filename, id = None):
         self.isDirectory = False
         self.isCompleteSeason = False
@@ -68,6 +73,7 @@ class Torrent:
         self.newPath = ""
 
     def getName(self):
+        """Return the name of the torrent."""
         if self.torrentType == TorrentType.Serie:
             if self.isCompleteSeason:
                 return "{0} Season {1}".format(self.name, self.season)
@@ -76,8 +82,8 @@ class Torrent:
         else:
             return self.name
     
-    # Calculates the destination path    
     def calculateNewPath(self):
+        """Calculate the destination path for the torrent."""
         if self.torrentType == TorrentType.Serie:
             self.newPath = os.path.join(seriePath, self.name, "Season {:0>2}".format(self.season))
         elif self.torrentType == TorrentType.Movie:
@@ -85,8 +91,8 @@ class Torrent:
         else:
              self.newPath = os.path.join(otherPath, self.name)
     
-    # Converts the filename to camelCase with spaces
     def checkNameSyntax(self):
+        """Convert the filename to camelCase with spaces."""
         nameParts = self.name.split('.')
         
         newName = ""
@@ -95,39 +101,45 @@ class Torrent:
 
         self.name = newName.strip()
 
-# Main class that makes all the torrent calculations        
 class Matcher:
-    # Entrance for calculating the torrent
+    """Main class that makes all the torrent calculations."""
+
     @staticmethod
     def parseTorrent(torrent):       
+    """Calculate the data from the torrent.
+
+    The entrance function to begin the torrent calcualations.
+    """
         if os.path.isfile(os.path.join(torrent.downloadPath, torrent.filename)):
             torrent.fullPath = os.path.join(torrent.downloadPath, torrent.filename)
-            Matcher.parseFileName(torrent, torrent.filename)
+            Matcher._parseFileName(torrent, torrent.filename)
         else:
             pathParts = torrent.downloadPath.split(os.sep)
             lastpart = pathParts.pop()
             if lastpart == torrent.filename and os.path.isdir(torrent.downloadPath):
                 torrent.isDirectory = True
                 torrent.fullPath = torrent.downloadPath
-                filename = Matcher.retrieveFileName(torrent.downloadPath)
-                Matcher.parseFileName(torrent, filename)
-                Matcher.parseDirectoryName(torrent)
+                filename = Matcher._retrieveFileName(torrent.downloadPath)
+                Matcher._parseFileName(torrent, filename)
+                Matcher._parseDirectoryName(torrent)
             else:
                 message = "Downloaded file does not exist. Path: \"{}\" Name: \"{}\"\n".format(torrent.downloadPath, torrent.filename)
                 logging.error(message)
                 raise Exception(message)
                 
     @staticmethod
-    def parseFileName(torrent, filename):
+    def _parseFileName(torrent, filename):
+        """Find the type of the torrent"""
         if VideoFileTypes.isVideoFile(filename):
             torrent.torrentType = TorrentType.Video
-            Matcher.parseVideoTorrent(torrent, filename)
+            Matcher._parseVideoTorrent(torrent, filename)
         else:
             torrent.torrentType = TorrentType.Other
     
     @staticmethod
-    def parseVideoTorrent(torrent, filename):       
-        result = Matcher.searchForSerieInName(filename)
+    def _parseVideoTorrent(torrent, filename):
+        """Parse a video torrent to get name, season, episode etc."""
+        result = Matcher._searchForSerieInName(filename)
         if result is not None and \
            int(result.group(2)) < 19 and \
            int(result.group(3)) < 30:
@@ -143,23 +155,26 @@ class Matcher:
             torrent.name = torrent.filename
 
     @staticmethod
-    def parseDirectoryName(torrent):
+    def _parseDirectoryName(torrent):
+        """Parse a directory to find if it contains a serie."""
         assert(torrent.isDirectory)
         if torrent.torrentType != TorrentType.Serie:
             return
             
-        result = Matcher.searchForSerieInName(torrent.filename)
+        result = Matcher._searchForSerieInName(torrent.filename)
         if result is None:
             torrent.isCompleteSeason = True
     
     @staticmethod
-    def searchForSerieInName(filename):
-        regexp = "(.*)\.S?(\\d{1,2})E?(\\d{2})\.(.*)"
+    def _searchForSerieInName(filename):
+        """Parse a filname to find a serie episode and season."""
+        regexp = "(.*)\.S?(\\d{1,2})[Ex]?(\\d{2})\.(.*)"
         reObject = re.compile(regexp, re.IGNORECASE)
         return reObject.search(filename)
     
     @staticmethod    
-    def retrieveFileName(inPath, firstTime = True):
+    def _retrieveFileName(inPath, firstTime = True):
+        """Go through the files in the torrent and look for a video file."""
         fileList = os.listdir(inPath)
 
         directories = []
@@ -174,16 +189,18 @@ class Matcher:
         
         if firstTime:
             for dir in directories:        
-                fileResult = Matcher.retrieveFileName(os.path.join(inPath, dir), False)
+                fileResult = Matcher._retrieveFileName(os.path.join(inPath, dir), False)
                 if fileResult is not None:
                     return fileResult
         return None
         
 def handleRmTreeError(function, path, exc_info):
+    """Handle and print understandable error message at error from shutil.rmtree()."""
     logging.error("{0}, {1}, {2}".format(function, path, exc_info))
 
 
 def getClient(argv):
+    """Find out which and return the torrent client is used."""
     try:
         # Checking for transmission client
         trVersion = os.environ["TR_APP_VERSION"]
@@ -203,6 +220,7 @@ def getClient(argv):
         sys.exit(1)
 
 def clearWatchdir(torrent):
+    """Remove old torrent files in the watch directory."""
     if not watchdirPath:
         return
     result = glob.glob(os.path.join(watchdirPath, torrent.name)+'*')
@@ -229,7 +247,7 @@ def main(argv):
     logging.info("  Filename: {}".format(torrent.filename))
     logging.info("  Filepath: {}".format(torrent.fullPath))
     logging.debug("  New path: {}".format(torrent.newPath))
-    logging.info("  Torrent type: {}".format(TorrentType.decode(torrent.torrentType)))
+    logging.info("  Torrent type: {}".format(TorrentType.toString(torrent.torrentType)))
     logging.info("  isDirectory: {}".format(torrent.isDirectory))
     if torrent.torrentType == TorrentType.Serie:
         logging.info("  Serie: {}".format(torrent.name))
@@ -272,13 +290,14 @@ def main(argv):
             logging.info("  Move from \"{}\" to \"{}\"".format(torrent.fullPath, newFile))
             shutil.move(torrent.fullPath, newFile)
             
+            # Only transmission supports updating the path
             if client.getClientName() == "transmission":
                 client.updatePath(torrent.id, torrent.newPath)
 
         clearWatchdir(torrent)
                 
         NotificationHandler.notifyRssFeed(torrent.getName())
-        NotificationHandler.notifyXbmcClient(torrent.getName())
+        NotificationHandler.notifyXbmcClients(torrent.getName())
 
     except IOError as error:
         logging.error("IO Error({0})".format(error))
