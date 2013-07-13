@@ -14,7 +14,7 @@ class Transmission:
             self.version = os.environ["TR_APP_VERSION"]
             self.downloadPath = os.environ["TR_TORRENT_DIR"]
             self.torrentName = os.environ["TR_TORRENT_NAME"]
-            self.localtime = os.environ["TR_TIME_LOCALTIME"]
+#            self.localtime = os.environ["TR_TIME_LOCALTIME"]
             self.torrentHash = os.environ["TR_TORRENT_HASH"]
             self.torrentId = int(os.environ["TR_TORRENT_ID"])
             if os.sep == '\\':            
@@ -77,12 +77,13 @@ class Transmission:
             if response["result"] != "success":
                return False
         except KeyError:
-           
             return False
         return True
         
     def updatePath(self, id, newPath):
         """Tells transmission to update the path to the torrent."""
+
+        logging.debug("  Updating transmission with new path")
         command = json.dumps({ "arguments": { "location": newPath, "ids": [id] }, "method": "torrent-set-location", "tag": self.tag })
         
         response = self._sendRequest(command)

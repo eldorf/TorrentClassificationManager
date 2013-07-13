@@ -6,6 +6,7 @@ import time, glob
 from datetime import datetime
 import logging
 import NotificationHandler
+import getopt
 
 # --- Constants --- #
 watchdirPath = '/mnt/downloads/watchdir/'
@@ -14,8 +15,12 @@ moviePath = "/mnt/downloads/Movies/"
 otherPath = "/mnt/downloads/Other/"
 logFile = "/mnt/downloads/torrentScript.log"
 
-#Setup logging format
-logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=logging.DEBUG)
+def setupLogging(logToScreen=False):
+    """Setup logging format"""
+    if logToScreen:
+        logging.basicConfig(format="%(message)s", level=logging.DEBUG)
+    else:
+        logging.basicConfig(format="%(message)s", filename=logFile, filemode='a', level=logging.DEBUG)
 
 #--- Classes --- #
 
@@ -106,10 +111,11 @@ class Matcher:
 
     @staticmethod
     def parseTorrent(torrent):       
-    """Calculate the data from the torrent.
+        """Calculate the data from the torrent.
 
-    The entrance function to begin the torrent calcualations.
-    """
+        The entrance function to begin the torrent calcualations.
+        """
+
         if os.path.isfile(os.path.join(torrent.downloadPath, torrent.filename)):
             torrent.fullPath = os.path.join(torrent.downloadPath, torrent.filename)
             Matcher._parseFileName(torrent, torrent.filename)
@@ -232,13 +238,27 @@ def clearWatchdir(torrent):
         logging.error("OS Error({0})".format(error))
 
 def main(argv):
-    # --- Start script --- #            
-    args = datetime.now().strftime("%Y-%m-%d %H:%M, ")
-    for arg in argv:
-        args += "\"" +arg +"\" "
-    logging.info(args)
+    # --- Start script --- #
+    logToScreen = False
+    opts, args = getopt.getopt(argv[1:], "", ["logToScreen"])
 
-    client = getClient(argv[1:])
+    for o,a in opts:
+        if o == "--logToScreen":
+            print "Logging to screen"
+            logToScreen = True
+        else:
+            print "Unknown option..."
+            sys.exit(1)
+
+    setupLogging(logToScreen)
+
+    argstring = datetime.now().strftime("%Y-%m-%d %H:%M, ") + argv[1]
+    datetime.now().strftime("%Y-%m-%d %H:%M, ")
+    for arg in args:
+        argstring += "\"" +arg +"\" "
+    logging.info(argstring)
+
+    client = getClient(args)
     torrent = Torrent(*client.getTorrentInfo())
     Matcher.parseTorrent(torrent)
     torrent.checkNameSyntax()
