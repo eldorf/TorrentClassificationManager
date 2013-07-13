@@ -29,43 +29,42 @@ def notifyXbmcClients(torrentName):
     """Notify the xbmc clients about the downloaded torrent."""
     import socket, urllib, json
 
+    addresses = ["192.168.1.60"]
     jsonPort = 9090
-    address = "192.168.1.60"
+    for address in addresses:
+        jsonAddress = (address, jsonPort)
+        try:
+            jsonSocket = socket.create_connection(jsonAddress)
+            jsonSocket.settimeout(1)
+        except socket.error:
+            # No connection to the machine, ignore
+            continue
 
-    jsonAddress = (address, jsonPort)
-    try:
-        jsonSocket = socket.create_connection(jsonAddress)
-        jsonSocket.settimeout(1)
-    except socket.error:
-        # No connection to the machine, ignore
-        return
+        # Check if a player is used    
+        command = '{ "jsonrpc": "2.0", "method": "Player.GetActivePlayers", "id": 1 }'
+        jsonSocket.sendall(command)
+        answer = jsonSocket.recv(1024)
+        jsonAns = json.loads(answer)
 
-    # Check if a player is used    
-    command = '{ "jsonrpc": "2.0", "method": "Player.GetActivePlayers", "id": 1 }'
-    jsonSocket.sendall(command)
-    answer = jsonSocket.recv(1024)
-    jsonAns = json.loads(answer)
+        # Content in result means that some player is used
+        # We do not not want to disturb that
+        if jsonAns["result"]:
+            jsonSocket.close()
+            continue
 
-    # Content in result means that some player is used
-    # We do not not want to disturb that
-    if jsonAns["result"]:
+        # Send the notification
+        title = "Download complete"
+        message = torrentName + " is downloaded."
+        command = '{ "jsonrpc": "2.0", "method": "GUI.ShowNotification", "params": {"title":"' +title +'", "message":"' + message +'"}, "id": 1}'
+        jsonSocket.sendall(command)
+        answer = jsonSocket.recv(1024)
+        jsonAns = json.loads(answer)
+       
         jsonSocket.close()
-        return
-
-    # Send the notification
-    title = "Download complete"
-    message = torrentName + " is downloaded."
-    command = '{ "jsonrpc": "2.0", "method": "GUI.ShowNotification", "params": {"title":"' +title +'", "message":"' + message +'"}, "id": 1}'
-    jsonSocket.sendall(command)
-    answer = jsonSocket.recv(1024)
-    jsonAns = json.loads(answer)
-   
-    jsonSocket.close()
-    return
  
 
 # Test the notifications
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     notifyRssFeed("This is just a test")
-    notifyXbmcClient("This is just a test")
+    notifyXbmcClients("This is just a test")
