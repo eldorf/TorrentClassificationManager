@@ -252,7 +252,7 @@ def main(argv):
 
     setupLogging(logToScreen)
 
-    argstring = datetime.now().strftime("%Y-%m-%d %H:%M, ") + argv[1]
+    argstring = datetime.now().strftime("%Y-%m-%d %H:%M, ") + argv[0]
     datetime.now().strftime("%Y-%m-%d %H:%M, ")
     for arg in args:
         argstring += "\"" +arg +"\" "
